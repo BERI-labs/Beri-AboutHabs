@@ -11,7 +11,7 @@ let db: IDBPDatabase | null = null
 
 // Version key to track when embeddings need regeneration
 const EMBEDDINGS_VERSION_KEY = 'beri-abouthabs-embeddings-version'
-const CURRENT_EMBEDDINGS_VERSION = '2'
+const CURRENT_EMBEDDINGS_VERSION = '3'
 
 /**
  * Initialise IndexedDB storage

@@ -195,18 +195,18 @@ function main() {
   const parsed = parseMarkdown(markdown)
   console.log(`Parsed ${parsed.length} chunks from markdown\n`)
 
-  const chunks = parsed.map((chunk) => {
+  // Output content-only chunks (no embeddings).
+  // The browser generates real MiniLM embeddings on first load and caches
+  // them in IndexedDB, so subsequent visits are instant.
+  // To pre-compute embeddings, run: node scripts/generate-embeddings.mjs
+  parsed.forEach((chunk) => {
     console.log(`  [${chunk.id}] ${chunk.metadata.source} → ${chunk.metadata.section}  (${chunk.content.length} chars)`)
-    return {
-      ...chunk,
-      embedding: generateEmbedding(chunk.content),
-    }
   })
 
   const outputPath = join(__dirname, '..', 'src', 'data', 'chunks.json')
-  fs.writeFileSync(outputPath, JSON.stringify(chunks, null, 2))
+  fs.writeFileSync(outputPath, JSON.stringify(parsed, null, 2))
 
-  console.log(`\nDone! Generated ${chunks.length} chunks with 384-dimensional embeddings`)
+  console.log(`\nDone! ${parsed.length} content-only chunks (embeddings generated at runtime)`)
   console.log(`Output saved to: ${outputPath}`)
 }
 

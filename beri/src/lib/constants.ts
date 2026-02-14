@@ -4,19 +4,19 @@
 
 // Model identifiers
 export const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2'
-// Using 4-bit quantized model for faster inference with broad WebGPU compatibility
-export const LLM_MODEL = 'SmolLM2-360M-Instruct-q4f32_1-MLC'
+// 1.7B model produces coherent, instruction-following responses
+export const LLM_MODEL = 'SmolLM2-1.7B-Instruct-q4f16_1-MLC'
 
 // Retrieval settings
-export const TOP_K_CHUNKS = 2
-export const SIMILARITY_THRESHOLD = 0.2
+export const TOP_K_CHUNKS = 3
+export const SIMILARITY_THRESHOLD = 0.25
 
 // Generation settings
-export const MAX_TOKENS = 200
-export const TEMPERATURE = 0.3
+export const MAX_TOKENS = 250
+export const TEMPERATURE = 0.2
 
-// LLM context settings (smaller = faster prefill)
-export const CONTEXT_WINDOW_SIZE = 1024
+// LLM context settings
+export const CONTEXT_WINDOW_SIZE = 2048
 
 // IndexedDB settings
 export const DB_NAME = 'beri-abouthabs-db'

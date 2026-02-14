@@ -84,7 +84,7 @@ export async function retrieveContext(query: string, precomputedEmbedding?: numb
 
 /**
  * Format retrieved chunks into a context string for the LLM
- * Uses a simple format optimised for small language models
+ * Chunks are already stored as plain text (markdown stripped at generation time)
  * @param chunks - The retrieved chunks
  * @returns Formatted context string
  */
@@ -93,7 +93,6 @@ export function formatContext(chunks: ScoredChunk[]): string {
     return 'No relevant information found. Tell the user to check with a member of staff.'
   }
 
-  // Simple, clean format for small models
   return chunks
     .map((chunk) => {
       return `From ${chunk.metadata.source} (${chunk.metadata.section}):\n${chunk.content}`

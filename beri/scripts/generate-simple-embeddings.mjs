@@ -66,7 +66,7 @@ function parseMarkdown(markdown) {
 
         chunks.push({
           id: `chunk-${chunks.length}`,
-          content,
+          content: stripMarkdown(content),
           metadata: {
             source: currentSource,
             section: sectionName,
@@ -81,7 +81,7 @@ function parseMarkdown(markdown) {
 
       chunks.push({
         id: `chunk-${chunks.length}`,
-        content: trimmed,
+        content: stripMarkdown(trimmed),
         metadata: {
           source: currentSource,
           section: sectionName,
@@ -95,7 +95,37 @@ function parseMarkdown(markdown) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Keyword groups tuned for About Habs content (384-dim to match MiniLM)
+// 2. Strip markdown so chunks are stored as clean plain text
+// ---------------------------------------------------------------------------
+
+function stripMarkdown(text) {
+  return text
+    // [text](url) → text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // (mailto:…)
+    .replace(/\(mailto:[^)]+\)/g, '')
+    // Header markers
+    .replace(/^#{1,6}\s+/gm, '')
+    // Bold / italic
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1')
+    // Table separator rows  |---|---|
+    .replace(/^\|[-:\s|]+\|$/gm, '')
+    // Table rows  | a | b |  → a: b
+    .replace(/^\|(.+)\|$/gm, (_match, inner) => {
+      const cells = inner.split('|').map(c => c.trim()).filter(Boolean)
+      return cells.join(': ')
+    })
+    // Blockquote markers
+    .replace(/^>\s?/gm, '')
+    // Horizontal rules
+    .replace(/^---+$/gm, '')
+    // Collapse blank lines
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+// ---------------------------------------------------------------------------
+// 3. Keyword groups tuned for About Habs content (384-dim to match MiniLM)
 // ---------------------------------------------------------------------------
 
 const KEYWORD_GROUPS = [

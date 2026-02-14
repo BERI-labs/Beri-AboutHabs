@@ -72,16 +72,13 @@ export async function generate(
     throw new Error('LLM not initialised')
   }
 
-  // Simple, direct prompt format for small models
-  // Putting everything in user message works better than system+user split
-  const prompt = `You are BERI, a school information assistant for Haberdashers' School. Answer the question using ONLY the information below. Be accurate, concise, and precise; use bullet points. Always cite the source.
+  // Direct prompt for small models — keep instructions minimal and concrete
+  const prompt = `Use ONLY the school information below to answer the question. If the answer is not in the information, say "I don't have that information." Be concise and use bullet points.
 
-SCHOOL INFORMATION:
 ${context}
 
-QUESTION: ${query}
-
-ANSWER:`
+Question: ${query}
+Answer:`
 
   console.log('Generating response for query:', query)
   console.log('Prompt length:', prompt.length, 'chars')

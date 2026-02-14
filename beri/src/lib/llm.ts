@@ -72,13 +72,13 @@ export async function generate(
     throw new Error('LLM not initialised')
   }
 
-  // Direct prompt for small models — keep instructions minimal and concrete
-  const prompt = `Use ONLY the school information below to answer the question. If the answer is not in the information, say "I don't have that information." Be concise and use bullet points.
+  // Qwen3 with thinking disabled — /no_think prefix keeps it in direct mode
+  const prompt = `/no_think
+Answer using ONLY the info below. If not found, say "I don't have that information."
 
 ${context}
 
-Question: ${query}
-Answer:`
+Question: ${query}`
 
   console.log('Generating response for query:', query)
   console.log('Prompt length:', prompt.length, 'chars')

@@ -4,20 +4,23 @@
 
 // Model identifiers
 export const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2'
-// 1.7B model produces coherent, instruction-following responses
-// q4f32_1 uses float32 shaders for broad GPU compatibility (f16 not supported everywhere)
-export const LLM_MODEL = 'SmolLM2-1.7B-Instruct-q4f32_1-MLC'
+// Qwen3-0.6B: small enough for Surface Go 2, q4f32_1 for broad GPU compatibility
+export const LLM_MODEL = 'Qwen3-0.6B-q4f32_1-MLC'
 
 // Retrieval settings
-export const TOP_K_CHUNKS = 3
-export const SIMILARITY_THRESHOLD = 0.25
+export const TOP_K_CHUNKS = 2
+export const SIMILARITY_THRESHOLD = 0.3
+
+// High-confidence threshold: if top chunk scores above this, return it
+// directly via template without invoking the LLM (Layer 2)
+export const DIRECT_ANSWER_THRESHOLD = 0.55
 
 // Generation settings
-export const MAX_TOKENS = 250
+export const MAX_TOKENS = 150
 export const TEMPERATURE = 0.2
 
-// LLM context settings
-export const CONTEXT_WINDOW_SIZE = 2048
+// LLM context settings (small for fast prefill on constrained hardware)
+export const CONTEXT_WINDOW_SIZE = 512
 
 // IndexedDB settings
 export const DB_NAME = 'beri-abouthabs-db'

@@ -5,7 +5,7 @@
 import type { ScoredChunk, MessageSource } from '@/types'
 import { embed } from './embeddings'
 import { getAllChunks } from './storage'
-import { TOP_K_CHUNKS, SIMILARITY_THRESHOLD } from './constants'
+import { TOP_K_CHUNKS, SIMILARITY_THRESHOLD, DIRECT_ANSWER_THRESHOLD } from './constants'
 
 /**
  * Calculate cosine similarity between two vectors
@@ -99,6 +99,67 @@ export function formatContext(chunks: ScoredChunk[]): string {
     })
     .join('\n\n')
 }
+
+/**
+ * Layer 2: Try to answer directly from chunks without the LLM.
+ * If the top chunk has a high similarity score, return its content
+ * formatted as a direct answer. Faster and more accurate than the LLM
+ * for straightforward extractive questions.
+ * @returns answer + sources if confident, null otherwise
+ */
+export function tryDirectAnswer(
+  chunks: ScoredChunk[]
+): { answer: string; sources: MessageSource[] } | null {
+  if (chunks.length === 0) return null
+
+  const topChunk = chunks[0]
+  if (topChunk.score < DIRECT_ANSWER_THRESHOLD) return null
+
+  console.log('Layer 2: direct answer from chunk, score:', topChunk.score.toFixed(3))
+
+  const answer = `${topChunk.content}\n\nSource: ${topChunk.metadata.source} — ${topChunk.metadata.section}`
+
+  return {
+    answer,
+    sources: [{ source: topChunk.metadata.source, section: topChunk.metadata.section }],
+  }
+}
+
+/**
+ * Layer 4: Detect garbage LLM output.
+ * Checks for repetition, excessive brevity, or nonsensical patterns
+ * that indicate the model failed to produce a useful answer.
+ */
+export function isGarbageResponse(response: string): boolean {
+  const trimmed = response.trim()
+
+  // Too short to be useful
+  if (trimmed.length < 10) return true
+
+  // Detect repeated words/phrases (e.g. "HABS DIALMOIL HABS DIALMOIL")
+  const words = trimmed.split(/\s+/)
+  if (words.length >= 6) {
+    const firstHalf = words.slice(0, Math.floor(words.length / 2)).join(' ')
+    const secondHalf = words.slice(Math.floor(words.length / 2), words.length).join(' ')
+    if (firstHalf === secondHalf) return true
+  }
+
+  // Detect high ratio of repeated trigrams
+  if (words.length >= 9) {
+    const trigrams = new Map<string, number>()
+    for (let i = 0; i < words.length - 2; i++) {
+      const tri = words.slice(i, i + 3).join(' ').toLowerCase()
+      trigrams.set(tri, (trigrams.get(tri) || 0) + 1)
+    }
+    const totalTrigrams = words.length - 2
+    const repeatedCount = Array.from(trigrams.values()).reduce((sum, c) => sum + (c > 1 ? c : 0), 0)
+    if (repeatedCount / totalTrigrams > 0.5) return true
+  }
+
+  return false
+}
+
+export const FALLBACK_MESSAGE = "I don't have enough information to answer that confidently. Please check habselstree.org.uk or email admissionsboys@habselstree.org.uk."
 
 /**
  * Extract unique sources from retrieved chunks

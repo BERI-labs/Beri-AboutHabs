@@ -4,7 +4,7 @@ import { SYSTEM_PROMPT } from '@/lib/constants'
 import { initStorage, loadChunksFromJSON, hasChunks } from '@/lib/storage'
 import { initEmbeddings, embed } from '@/lib/embeddings'
 import { checkWebGPU, initLLM, generate } from '@/lib/llm'
-import { retrieveContext, formatContext, extractSources } from '@/lib/retrieval'
+import { retrieveContext, formatContext, extractSources, tryDirectAnswer, isGarbageResponse, FALLBACK_MESSAGE } from '@/lib/retrieval'
 import { getFAQResponse } from '@/lib/faq'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { Header } from '@/components/Header'
@@ -184,10 +184,10 @@ function App() {
     setIsStreaming(true)
 
     try {
-      // Check FAQ cache first for instant responses (uses text matching)
+      // ── Layer 1: FAQ cache (instant, 0ms) ───────────────────────────
       const faqResponse = getFAQResponse(content)
       if (faqResponse) {
-        console.log('FAQ cache hit - returning instant response')
+        console.log('Layer 1: FAQ cache hit')
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMessage.id
@@ -203,12 +203,9 @@ function App() {
         return
       }
 
-      // No FAQ match - proceed with full RAG pipeline
+      // ── Retrieve chunks (shared by layers 2-4) ─────────────────────
       const chunks = await retrieveContext(content)
-      const context = formatContext(chunks)
       const sources: MessageSource[] = extractSources(chunks)
-
-      // Extract context chunks for display (top 2)
       const contextChunks: ContextChunk[] = chunks.slice(0, 2).map((chunk) => ({
         content: chunk.content,
         source: chunk.metadata.source,
@@ -216,9 +213,30 @@ function App() {
         score: chunk.score,
       }))
 
-      console.log('Retrieved chunks:', chunks.length, 'Context length:', context.length)
+      // ── Layer 2: Direct chunk answer (high confidence, ~100ms) ──────
+      const directAnswer = tryDirectAnswer(chunks)
+      if (directAnswer) {
+        console.log('Layer 2: direct chunk answer')
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessage.id
+              ? {
+                  ...msg,
+                  content: directAnswer.answer,
+                  sources: directAnswer.sources,
+                  contextChunks,
+                  isStreaming: false,
+                }
+              : msg
+          )
+        )
+        return
+      }
 
-      // Generate response with streaming
+      // ── Layer 3: LLM generation (slow path) ────────────────────────
+      const context = formatContext(chunks)
+      console.log('Layer 3: LLM generation, chunks:', chunks.length, 'context:', context.length, 'chars')
+
       let fullResponse = ''
 
       await generate(SYSTEM_PROMPT, context, content, (token) => {
@@ -232,7 +250,12 @@ function App() {
         )
       })
 
-      // Finalise message with sources and context chunks
+      // ── Layer 4: Garbage detection ──────────────────────────────────
+      if (isGarbageResponse(fullResponse)) {
+        console.log('Layer 4: garbage detected, using fallback')
+        fullResponse = FALLBACK_MESSAGE
+      }
+
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMessage.id

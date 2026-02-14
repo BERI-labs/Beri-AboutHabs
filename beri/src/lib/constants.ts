@@ -5,7 +5,8 @@
 // Model identifiers
 export const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2'
 // 1.7B model produces coherent, instruction-following responses
-export const LLM_MODEL = 'SmolLM2-1.7B-Instruct-q4f16_1-MLC'
+// q4f32_1 uses float32 shaders for broad GPU compatibility (f16 not supported everywhere)
+export const LLM_MODEL = 'SmolLM2-1.7B-Instruct-q4f32_1-MLC'
 
 // Retrieval settings
 export const TOP_K_CHUNKS = 3

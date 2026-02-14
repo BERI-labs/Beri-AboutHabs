@@ -83,38 +83,8 @@ export async function retrieveContext(query: string, precomputedEmbedding?: numb
 }
 
 /**
- * Strip markdown formatting so the LLM receives clean plain text.
- * Removes headers, bold/italic markers, links, table pipes, and blockquotes.
- */
-function stripMarkdown(text: string): string {
-  return text
-    // Remove markdown link syntax [text](url) → text
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    // Remove mailto: links
-    .replace(/\(mailto:[^)]+\)/g, '')
-    // Remove header markers
-    .replace(/^#{1,6}\s+/gm, '')
-    // Remove bold/italic markers
-    .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1')
-    // Remove table separator rows  |---|---|
-    .replace(/^\|[-:\s|]+\|$/gm, '')
-    // Convert table rows  | a | b |  → a: b
-    .replace(/^\|(.+)\|$/gm, (_match, inner: string) => {
-      const cells = inner.split('|').map((c: string) => c.trim()).filter(Boolean)
-      return cells.join(': ')
-    })
-    // Remove blockquote markers
-    .replace(/^>\s?/gm, '')
-    // Remove horizontal rules
-    .replace(/^---+$/gm, '')
-    // Collapse multiple blank lines
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-/**
  * Format retrieved chunks into a context string for the LLM
- * Uses a simple format optimised for small language models
+ * Chunks are already stored as plain text (markdown stripped at generation time)
  * @param chunks - The retrieved chunks
  * @returns Formatted context string
  */
@@ -123,10 +93,9 @@ export function formatContext(chunks: ScoredChunk[]): string {
     return 'No relevant information found. Tell the user to check with a member of staff.'
   }
 
-  // Simple, clean format for small models — strip markdown to save tokens
   return chunks
     .map((chunk) => {
-      return `From ${chunk.metadata.source} (${chunk.metadata.section}):\n${stripMarkdown(chunk.content)}`
+      return `From ${chunk.metadata.source} (${chunk.metadata.section}):\n${chunk.content}`
     })
     .join('\n\n')
 }

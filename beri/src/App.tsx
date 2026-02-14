@@ -130,14 +130,18 @@ function App() {
       } catch (error) {
         if (!cancelled) {
           console.error('Initialisation error:', error)
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : typeof error === 'string'
+                ? error
+                : JSON.stringify(error) || 'An unexpected error occurred during initialisation.'
+          console.error('Full init error:', error)
           setLoadingState({
             stage: 'error',
             progress: 0,
             message: 'Failed to initialise',
-            error:
-              error instanceof Error
-                ? error.message
-                : 'An unexpected error occurred during initialisation.',
+            error: errorMessage,
           })
         }
       }

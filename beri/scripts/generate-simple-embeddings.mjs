@@ -24,7 +24,8 @@ const __dirname = dirname(__filename)
  *   - Skip very small blocks (<80 chars) like the title line
  */
 function parseMarkdown(markdown) {
-  const blocks = markdown.split(/\n---\n/)
+  // Normalise Windows \r\n to \n so split patterns work cross-platform
+  const blocks = markdown.replace(/\r\n/g, '\n').split(/\n---\n/)
   const chunks = []
   let currentSource = 'General'
 

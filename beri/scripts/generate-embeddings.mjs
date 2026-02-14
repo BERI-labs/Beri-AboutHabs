@@ -21,7 +21,8 @@ const __dirname = dirname(__filename)
 // ---------------------------------------------------------------------------
 
 function parseMarkdown(markdown) {
-  const blocks = markdown.split(/\n---\n/)
+  // Normalise Windows \r\n to \n so split patterns work cross-platform
+  const blocks = markdown.replace(/\r\n/g, '\n').split(/\n---\n/)
   const chunks = []
   let currentSource = 'General'
 
@@ -106,6 +107,11 @@ async function main() {
 
   const outputPath = join(__dirname, '..', 'src', 'data', 'chunks.json')
   fs.writeFileSync(outputPath, JSON.stringify(chunks, null, 2))
+
+  if (chunks.length === 0) {
+    console.error('\nError: No chunks were parsed. Check that about-habs.md exists and uses --- separators.')
+    process.exit(1)
+  }
 
   console.log(`\nDone! Generated ${chunks.length} chunks with ${chunks[0].embedding.length}-dimensional embeddings`)
   console.log(`Output saved to: ${outputPath}`)

@@ -1,12 +1,12 @@
 /**
- * LLM layer using WebLLM
+ * LLM layer using WebLLM (offloaded to a Web Worker)
  */
 
 import * as webllm from '@mlc-ai/web-llm'
 import { LLM_MODEL, MAX_TOKENS, TEMPERATURE, CONTEXT_WINDOW_SIZE } from './constants'
 import type { ProgressCallback } from '@/types'
 
-let engine: webllm.MLCEngine | null = null
+let engine: webllm.WebWorkerMLCEngine | null = null
 
 /**
  * Check if WebGPU is available
@@ -37,7 +37,12 @@ export async function initLLM(onProgress?: ProgressCallback): Promise<void> {
     onProgress?.(progress, report.text)
   }
 
-  engine = new webllm.MLCEngine({
+  const worker = new Worker(
+    new URL('./llm.worker.ts', import.meta.url),
+    { type: 'module' }
+  )
+
+  engine = new webllm.WebWorkerMLCEngine(worker, {
     initProgressCallback,
   })
 

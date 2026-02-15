@@ -12,7 +12,7 @@ export const TOP_K_CHUNKS = 4
 export const SIMILARITY_THRESHOLD = 0.3
 
 // Generation settings
-export const MAX_TOKENS = 1024
+export const MAX_TOKENS = 2048
 export const TEMPERATURE = 0.2
 
 // LLM context settings — needs room for system prompt + 4 chunks + thinking + answer

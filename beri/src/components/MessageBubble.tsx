@@ -1,5 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Message } from '@/types'
+import type { Message, MessageSource } from '@/types'
+
+/**
+ * Map source names to their Habs website URLs.
+ */
+const SOURCE_URL_MAP: Record<string, string> = {
+  'School Overview': 'https://www.habselstree.org.uk/boys/',
+  'Vision and Values': 'https://www.habselstree.org.uk/boys/about-us/our-vision/',
+  'Admissions': 'https://www.habselstree.org.uk/boys/admissions/admissions-process/',
+  'Fees and Financial Support': 'https://www.habselstree.org.uk/boys/admissions/fees/',
+  'Prep School (Ages 4-11)': 'https://www.habselstree.org.uk/boys/prep/life-in-our-prep-school/',
+  'Senior School (Years 7-11, Ages 11-16)': 'https://www.habselstree.org.uk/boys/senior/inside-the-classroom/',
+  'Sixth Form (Years 12-13, Ages 16-18)': 'https://www.habselstree.org.uk/boys/sixth-form/inside-the-classroom/',
+  'Sport and Co-Curricular': 'https://www.habselstree.org.uk/boys/senior/beyond-the-classroom/sport/',
+  'Pastoral Care and House System': 'https://www.habselstree.org.uk/boys/',
+  'Governance and History': 'https://www.habselstree.org.uk/boys/',
+  'Contact Information': 'https://www.habselstree.org.uk/boys/',
+}
+
+function getSourceUrl(source: MessageSource): string {
+  return SOURCE_URL_MAP[source.source] || 'https://www.habselstree.org.uk/boys/'
+}
 
 const THINKING_VERBS = [
   'Thinking',
@@ -176,7 +197,7 @@ export function MessageBubble({ message }: Props) {
           )}
         </div>
 
-        {/* Sources (for assistant messages) */}
+        {/* Sources (for assistant messages) — clickable links to Habs website */}
         {!isUser && message.sources && message.sources.length > 0 && !message.isStreaming && (
           <div className="mt-3 pt-3 border-t border-gray-200">
             <p className="text-xs font-semibold text-gray-500 mb-2">Sources:</p>
@@ -184,12 +205,17 @@ export function MessageBubble({ message }: Props) {
               {message.sources.map((source, index) => (
                 <li
                   key={index}
-                  className="text-xs text-habs-navy/70 flex items-start gap-1"
+                  className="text-xs flex items-start gap-1"
                 >
                   <span className="text-habs-gold">•</span>
-                  <span>
+                  <a
+                    href={getSourceUrl(source)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-habs-navy/70 hover:text-habs-navy underline decoration-habs-gold/40 hover:decoration-habs-gold transition-colors"
+                  >
                     {source.source} — {source.section}
-                  </span>
+                  </a>
                 </li>
               ))}
             </ul>

@@ -3,7 +3,9 @@ interface Props {
 }
 
 /**
- * Application header with logo and status
+ * Application header with logo and status.
+ * Logo: drop beri-logo.png into beri/public/ and it appears automatically.
+ * If the file is missing, the img hides itself gracefully.
  */
 export function Header({ isReady }: Props) {
   const logoUrl = `${import.meta.env.BASE_URL}beri-logo.png`
@@ -15,6 +17,7 @@ export function Header({ isReady }: Props) {
           src={logoUrl}
           alt="BERI Logo"
           className="h-10"
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
         />
       </div>
 

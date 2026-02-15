@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Message, LoadingState, MessageSource, ContextChunk } from '@/types'
-import { SYSTEM_PROMPT } from '@/lib/constants'
 import { initStorage, loadChunksFromJSON, hasChunks } from '@/lib/storage'
 import { initEmbeddings, embed } from '@/lib/embeddings'
 import { checkWebGPU, initLLM, generate } from '@/lib/llm'
@@ -243,7 +242,7 @@ function App() {
       let inThinkBlock = false
       let thinkDone = false
 
-      await generate(SYSTEM_PROMPT, context, content, (token) => {
+      await generate(context, content, (token) => {
         rawStream += token
 
         // Parse <think>...</think> blocks from the stream

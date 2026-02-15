@@ -3,7 +3,7 @@
  */
 
 import * as webllm from '@mlc-ai/web-llm'
-import { LLM_MODEL, MAX_TOKENS, TEMPERATURE, CONTEXT_WINDOW_SIZE } from './constants'
+import { LLM_MODEL, MAX_TOKENS, TEMPERATURE, CONTEXT_WINDOW_SIZE, SYSTEM_PROMPT } from './constants'
 import type { ProgressCallback } from '@/types'
 
 let engine: webllm.WebWorkerMLCEngine | null = null
@@ -56,14 +56,12 @@ export async function initLLM(onProgress?: ProgressCallback): Promise<void> {
 /**
  * Generate a response using the LLM
  * Uses a simple prompt format optimised for small models
- * @param _systemPrompt - The system prompt (unused, kept for API compatibility)
  * @param context - The retrieved context
  * @param query - The user's question
  * @param onToken - Callback for each generated token
  * @returns The complete response
  */
 export async function generate(
-  _systemPrompt: string,
   context: string,
   query: string,
   onToken?: (token: string) => void
@@ -72,18 +70,14 @@ export async function generate(
     throw new Error('LLM not initialised')
   }
 
-  // Qwen3 with thinking enabled — model emits <think>...</think> before answering
-  const prompt = `Answer using ONLY the info below. If not found, say "I don't have that information."
-
-${context}
-
-Question: ${query}`
+  const userMessage = `Context:\n${context}\n\nQuestion: ${query}`
 
   console.log('Generating response for query:', query)
-  console.log('Prompt length:', prompt.length, 'chars')
+  console.log('Prompt length:', userMessage.length, 'chars')
 
   const messages: webllm.ChatCompletionMessageParam[] = [
-    { role: 'user', content: prompt },
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: userMessage },
   ]
 
   let fullResponse = ''

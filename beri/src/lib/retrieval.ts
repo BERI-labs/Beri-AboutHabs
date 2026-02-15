@@ -5,7 +5,7 @@
 import type { ScoredChunk, MessageSource } from '@/types'
 import { embed } from './embeddings'
 import { getAllChunks } from './storage'
-import { TOP_K_CHUNKS, SIMILARITY_THRESHOLD, DIRECT_ANSWER_THRESHOLD } from './constants'
+import { TOP_K_CHUNKS, SIMILARITY_THRESHOLD } from './constants'
 
 /**
  * Calculate cosine similarity between two vectors
@@ -101,32 +101,7 @@ export function formatContext(chunks: ScoredChunk[]): string {
 }
 
 /**
- * Layer 2: Try to answer directly from chunks without the LLM.
- * If the top chunk has a high similarity score, return its content
- * formatted as a direct answer. Faster and more accurate than the LLM
- * for straightforward extractive questions.
- * @returns answer + sources if confident, null otherwise
- */
-export function tryDirectAnswer(
-  chunks: ScoredChunk[]
-): { answer: string; sources: MessageSource[] } | null {
-  if (chunks.length === 0) return null
-
-  const topChunk = chunks[0]
-  if (topChunk.score < DIRECT_ANSWER_THRESHOLD) return null
-
-  console.log('Layer 2: direct answer from chunk, score:', topChunk.score.toFixed(3))
-
-  const answer = `${topChunk.content}\n\nSource: ${topChunk.metadata.source} — ${topChunk.metadata.section}`
-
-  return {
-    answer,
-    sources: [{ source: topChunk.metadata.source, section: topChunk.metadata.section }],
-  }
-}
-
-/**
- * Layer 4: Detect garbage LLM output.
+ * Layer 3: Detect garbage LLM output.
  * Checks for repetition, excessive brevity, or nonsensical patterns
  * that indicate the model failed to produce a useful answer.
  */

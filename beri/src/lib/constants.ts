@@ -11,10 +11,6 @@ export const LLM_MODEL = 'Qwen3-0.6B-q4f32_1-MLC'
 export const TOP_K_CHUNKS = 4
 export const SIMILARITY_THRESHOLD = 0.3
 
-// High-confidence threshold: if top chunk scores above this, return it
-// directly via template without invoking the LLM (Layer 2)
-export const DIRECT_ANSWER_THRESHOLD = 0.55
-
 // Generation settings
 export const MAX_TOKENS = 1024
 export const TEMPERATURE = 0.2

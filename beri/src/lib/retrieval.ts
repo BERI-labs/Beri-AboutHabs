@@ -52,11 +52,28 @@ export async function retrieveContext(query: string, precomputedEmbedding?: numb
     return []
   }
 
-  // Score all chunks
-  const scoredChunks: ScoredChunk[] = chunks.map((chunk) => ({
-    ...chunk,
-    score: cosineSimilarity(queryEmbedding, chunk.embedding),
-  }))
+  // Extract significant query terms for keyword boosting (3+ chars, lowercased)
+  const queryTerms = query.toLowerCase()
+    .replace(/[?.!,]/g, '')
+    .split(/\s+/)
+    .filter((t) => t.length >= 3)
+
+  // Score all chunks: semantic similarity + keyword boost
+  const scoredChunks: ScoredChunk[] = chunks.map((chunk) => {
+    const semantic = cosineSimilarity(queryEmbedding, chunk.embedding)
+
+    // Keyword boost: if query terms appear in the chunk content or section name, bump score
+    const chunkText = `${chunk.metadata.source} ${chunk.metadata.section} ${chunk.content}`.toLowerCase()
+    let keywordHits = 0
+    for (const term of queryTerms) {
+      if (chunkText.includes(term)) keywordHits++
+    }
+    const keywordBoost = queryTerms.length > 0
+      ? (keywordHits / queryTerms.length) * 0.1
+      : 0
+
+    return { ...chunk, score: semantic + keywordBoost }
+  })
 
   // Sort by score (highest first)
   const sortedChunks = scoredChunks.sort((a, b) => b.score - a.score)

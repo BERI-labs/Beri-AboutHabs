@@ -122,11 +122,22 @@ function App() {
           if (!cancelled) {
             setLoadingState({
               stage: 'llm',
-              progress: 60 + Math.round(progress * 0.4), // 60-100%
+              progress: 60 + Math.round(progress * 0.35), // 60-95%
               message,
             })
           }
         })
+
+        if (cancelled) return
+
+        // Step 6: Warm-up inference — pre-compile WebGPU shaders
+        setLoadingState({
+          stage: 'llm',
+          progress: 96,
+          message: 'Warming up GPU...',
+        })
+
+        await generate('Hello.', 'Hi', () => {})
 
         if (cancelled) return
 

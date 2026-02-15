@@ -8,6 +8,10 @@
 import { pipeline } from '@xenova/transformers'
 import * as fs from 'fs'
 import * as path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // ---------------------------------------------------------------------------
 // Markdown parser
@@ -95,7 +99,9 @@ async function main() {
     const chunk = parsed[i]
     console.log(`  [${i + 1}/${parsed.length}] ${chunk.metadata.source} → ${chunk.metadata.section}`)
 
-    const output = await embedder(chunk.content, { pooling: 'mean', normalize: true })
+    // Prepend heading to embedding text for better semantic matching
+    const embeddingText = `${chunk.metadata.source} — ${chunk.metadata.section}: ${chunk.content}`
+    const output = await embedder(embeddingText, { pooling: 'mean', normalize: true })
     const embedding = Array.from(output.data)
 
     chunks.push({ ...chunk, embedding })

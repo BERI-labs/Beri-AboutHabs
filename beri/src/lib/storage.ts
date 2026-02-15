@@ -11,7 +11,7 @@ let db: IDBPDatabase | null = null
 
 // Version key to track when embeddings need regeneration
 const EMBEDDINGS_VERSION_KEY = 'beri-abouthabs-embeddings-version'
-const CURRENT_EMBEDDINGS_VERSION = '4'
+const CURRENT_EMBEDDINGS_VERSION = '5'
 
 /**
  * Initialise IndexedDB storage
@@ -74,7 +74,9 @@ export async function loadChunksFromJSON(
     onProgress?.(i + 1, total)
 
     // Use pre-computed embedding if available, otherwise generate one
-    const embedding = raw.embedding || await generateEmbedding(raw.content)
+    // Prepend heading to embedding text for better semantic matching
+    const embeddingText = `${raw.metadata.source} — ${raw.metadata.section}: ${raw.content}`
+    const embedding = raw.embedding || await generateEmbedding(embeddingText)
 
     const chunk: Chunk = {
       id: raw.id,

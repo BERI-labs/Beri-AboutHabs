@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Message, LoadingState, MessageSource, ContextChunk } from '@/types'
-import { SYSTEM_PROMPT } from '@/lib/constants'
 import { initStorage, loadChunksFromJSON, hasChunks } from '@/lib/storage'
 import { initEmbeddings, embed } from '@/lib/embeddings'
 import { checkWebGPU, initLLM, generate } from '@/lib/llm'
@@ -10,6 +9,7 @@ import { LoadingScreen } from '@/components/LoadingScreen'
 import { Header } from '@/components/Header'
 import { ChatContainer } from '@/components/ChatContainer'
 import { InputArea } from '@/components/InputArea'
+import { HowBeriWorks, hasSeenHowItWorks, markHowItWorksSeen } from '@/components/HowBeriWorks'
 
 function App() {
   const [loadingState, setLoadingState] = useState<LoadingState>({
@@ -19,8 +19,17 @@ function App() {
   })
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
 
   const isReady = loadingState.stage === 'ready'
+
+  // Show "How BERI Works" on first visit once the app is ready
+  useEffect(() => {
+    if (isReady && !hasSeenHowItWorks()) {
+      setShowHowItWorks(true)
+      markHowItWorksSeen()
+    }
+  }, [isReady])
 
   // Initialisation sequence
   useEffect(() => {
@@ -243,7 +252,7 @@ function App() {
       let inThinkBlock = false
       let thinkDone = false
 
-      await generate(SYSTEM_PROMPT, context, content, (token) => {
+      await generate(context, content, (token) => {
         rawStream += token
 
         // Parse <think>...</think> blocks from the stream
@@ -344,7 +353,8 @@ function App() {
   // Main chat interface
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      <Header isReady={isReady} />
+      <Header isReady={isReady} onHowItWorks={() => setShowHowItWorks(true)} />
+      <HowBeriWorks isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} />
       <ChatContainer
         messages={messages}
         onSuggestedQuestion={handleSend}

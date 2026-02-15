@@ -237,29 +237,83 @@ function App() {
       const context = formatContext(chunks)
       console.log('Layer 3: LLM generation, chunks:', chunks.length, 'context:', context.length, 'chars')
 
-      let fullResponse = ''
+      let rawStream = ''
+      let thinkingContent = ''
+      let answerContent = ''
+      let inThinkBlock = false
+      let thinkDone = false
 
       await generate(SYSTEM_PROMPT, context, content, (token) => {
-        fullResponse += token
+        rawStream += token
+
+        // Parse <think>...</think> blocks from the stream
+        if (!thinkDone) {
+          // Check if we've entered a think block
+          if (!inThinkBlock && rawStream.includes('<think>')) {
+            inThinkBlock = true
+          }
+
+          if (inThinkBlock) {
+            // Extract thinking content so far
+            const thinkStart = rawStream.indexOf('<think>') + 7
+            const thinkEnd = rawStream.indexOf('</think>')
+            if (thinkEnd !== -1) {
+              // Think block complete
+              thinkingContent = rawStream.substring(thinkStart, thinkEnd).trim()
+              answerContent = rawStream.substring(thinkEnd + 8).trim()
+              inThinkBlock = false
+              thinkDone = true
+            } else {
+              // Still thinking
+              thinkingContent = rawStream.substring(thinkStart).trim()
+            }
+
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessage.id
+                  ? { ...msg, thinking: thinkingContent, isThinking: !thinkDone, content: answerContent }
+                  : msg
+              )
+            )
+            return
+          }
+        }
+
+        // After thinking (or if no thinking), accumulate answer
+        if (thinkDone) {
+          const thinkEnd = rawStream.indexOf('</think>')
+          answerContent = rawStream.substring(thinkEnd + 8).trim()
+        } else {
+          answerContent = rawStream.trim()
+        }
+
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMessage.id
-              ? { ...msg, content: fullResponse }
+              ? { ...msg, content: answerContent, isThinking: false }
               : msg
           )
         )
       })
 
       // ── Layer 4: Garbage detection ──────────────────────────────────
-      if (isGarbageResponse(fullResponse)) {
+      if (isGarbageResponse(answerContent)) {
         console.log('Layer 4: garbage detected, using fallback')
-        fullResponse = FALLBACK_MESSAGE
+        answerContent = FALLBACK_MESSAGE
       }
 
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMessage.id
-            ? { ...msg, content: fullResponse, sources, contextChunks, isStreaming: false }
+            ? {
+                ...msg,
+                content: answerContent,
+                thinking: thinkingContent || undefined,
+                isThinking: false,
+                sources,
+                contextChunks,
+                isStreaming: false,
+              }
             : msg
         )
       )

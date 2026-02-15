@@ -11,6 +11,7 @@ interface Props {
 export function MessageBubble({ message }: Props) {
   const isUser = message.role === 'user'
   const [showContext, setShowContext] = useState(false)
+  const [showThinking, setShowThinking] = useState(false)
   const formattedTime = message.timestamp.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
@@ -30,10 +31,43 @@ export function MessageBubble({ message }: Props) {
           }
         `}
       >
+        {/* Thinking trace (collapsible) */}
+        {!isUser && (message.thinking || message.isThinking) && (
+          <div className="mb-3">
+            <button
+              onClick={() => setShowThinking(!showThinking)}
+              className="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-1.5"
+            >
+              {message.isThinking ? (
+                <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              ) : (
+                <svg
+                  className={`w-3 h-3 transition-transform ${showThinking ? 'rotate-90' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+              {message.isThinking ? 'Thinking...' : 'Thinking — click to view'}
+            </button>
+
+            {(showThinking || message.isThinking) && message.thinking && (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                {message.thinking}
+                {message.isThinking && (
+                  <span className="inline-block w-1.5 h-3 ml-0.5 bg-amber-500 animate-pulse" />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Message content */}
         <div className="whitespace-pre-wrap break-words">
           {message.content}
-          {message.isStreaming && (
+          {message.isStreaming && !message.isThinking && (
             <span className="inline-block w-2 h-4 ml-1 bg-habs-gold animate-pulse" />
           )}
         </div>

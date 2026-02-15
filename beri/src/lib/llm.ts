@@ -111,6 +111,23 @@ export async function generate(
 }
 
 /**
+ * Warm up the GPU by running a minimal 1-token generation.
+ * This forces WebGPU to compile all WGSL shaders during loading
+ * rather than on the first real user query.
+ */
+export async function warmUp(): Promise<void> {
+  if (!engine) return
+
+  await engine.chat.completions.create({
+    messages: [{ role: 'user', content: 'Hi' }],
+    max_tokens: 1,
+    temperature: 0,
+  })
+
+  await engine.resetChat()
+}
+
+/**
  * Reset the chat context
  */
 export async function resetChat(): Promise<void> {

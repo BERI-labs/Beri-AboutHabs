@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import type { Message, LoadingState, MessageSource, ContextChunk } from '@/types'
 import { initStorage, loadChunksFromJSON, hasChunks } from '@/lib/storage'
 import { initEmbeddings, embed } from '@/lib/embeddings'
-import { checkWebGPU, initLLM, generate } from '@/lib/llm'
+import { checkWebGPU, initLLM, generate, warmUp } from '@/lib/llm'
 import { retrieveContext, formatContext, extractSources, isGarbageResponse, FALLBACK_MESSAGE } from '@/lib/retrieval'
 import { getFAQResponse } from '@/lib/faq'
 import { LoadingScreen } from '@/components/LoadingScreen'
@@ -137,7 +137,7 @@ function App() {
           message: 'Warming up GPU...',
         })
 
-        await generate('Hello.', 'Hi', () => {})
+        await warmUp()
 
         if (cancelled) return
 

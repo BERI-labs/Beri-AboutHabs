@@ -45,6 +45,9 @@ export interface Message {
   sources?: MessageSource[]
   contextChunks?: ContextChunk[]
   isStreaming?: boolean
+  /** Qwen3 thinking trace (content inside <think>...</think>) */
+  thinking?: string
+  isThinking?: boolean
 }
 
 /** Loading state for initialisation */

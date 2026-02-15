@@ -8,7 +8,7 @@ export const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2'
 export const LLM_MODEL = 'Qwen3-0.6B-q4f32_1-MLC'
 
 // Retrieval settings
-export const TOP_K_CHUNKS = 2
+export const TOP_K_CHUNKS = 4
 export const SIMILARITY_THRESHOLD = 0.3
 
 // High-confidence threshold: if top chunk scores above this, return it
@@ -16,11 +16,11 @@ export const SIMILARITY_THRESHOLD = 0.3
 export const DIRECT_ANSWER_THRESHOLD = 0.55
 
 // Generation settings
-export const MAX_TOKENS = 150
+export const MAX_TOKENS = 450
 export const TEMPERATURE = 0.2
 
-// LLM context settings (small for fast prefill on constrained hardware)
-export const CONTEXT_WINDOW_SIZE = 512
+// LLM context settings — needs room for 4 chunks + thinking + answer
+export const CONTEXT_WINDOW_SIZE = 4096
 
 // IndexedDB settings
 export const DB_NAME = 'beri-abouthabs-db'

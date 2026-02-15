@@ -46,7 +46,14 @@ export function ChatContainer({ messages, onSuggestedQuestion, isStreaming }: Pr
         // Message list
         <div className="max-w-3xl mx-auto space-y-4">
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+              showSourceHint={
+                message.role === 'assistant' &&
+                message === messages.find((m) => m.role === 'assistant')
+              }
+            />
           ))}
           <div ref={bottomRef} />
         </div>

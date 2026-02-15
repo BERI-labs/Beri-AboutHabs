@@ -20,16 +20,16 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
+  // Check first visit once on mount — show info on loading screen and mark as seen
+  const [isFirstVisit] = useState(() => {
+    if (!hasSeenHowItWorks()) {
+      markHowItWorksSeen()
+      return true
+    }
+    return false
+  })
 
   const isReady = loadingState.stage === 'ready'
-
-  // Show "How BERI Works" on first visit once the app is ready
-  useEffect(() => {
-    if (isReady && !hasSeenHowItWorks()) {
-      setShowHowItWorks(true)
-      markHowItWorksSeen()
-    }
-  }, [isReady])
 
   // Initialisation sequence
   useEffect(() => {
@@ -122,11 +122,22 @@ function App() {
           if (!cancelled) {
             setLoadingState({
               stage: 'llm',
-              progress: 60 + Math.round(progress * 0.4), // 60-100%
+              progress: 60 + Math.round(progress * 0.35), // 60-95%
               message,
             })
           }
         })
+
+        if (cancelled) return
+
+        // Step 6: Warm-up inference — pre-compile WebGPU shaders
+        setLoadingState({
+          stage: 'llm',
+          progress: 96,
+          message: 'Warming up GPU...',
+        })
+
+        await generate('Hello.', 'Hi', () => {})
 
         if (cancelled) return
 
@@ -327,7 +338,7 @@ function App() {
 
   // Show loading screen until ready
   if (!isReady) {
-    return <LoadingScreen loadingState={loadingState} onRetry={handleRetry} />
+    return <LoadingScreen loadingState={loadingState} onRetry={handleRetry} isFirstVisit={isFirstVisit} />
   }
 
   // Main chat interface

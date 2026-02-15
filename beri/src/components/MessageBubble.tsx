@@ -127,12 +127,13 @@ function useRotatingVerb(isActive: boolean): string {
 
 interface Props {
   message: Message
+  showSourceHint?: boolean
 }
 
 /**
  * Individual message bubble component
  */
-export function MessageBubble({ message }: Props) {
+export function MessageBubble({ message, showSourceHint = false }: Props) {
   const isUser = message.role === 'user'
   const [showContext, setShowContext] = useState(false)
   const [showThinking, setShowThinking] = useState(false)
@@ -242,6 +243,14 @@ export function MessageBubble({ message }: Props) {
                   >
                     {source.source} — {source.section}
                   </a>
+                  {showSourceHint && index === 0 && (
+                    <span className="ml-1 flex items-center gap-1 text-habs-gold animate-bounce-gentle">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7 17l9.2-9.2M17 17V7H7" />
+                      </svg>
+                      <span className="text-[10px] text-gray-400 font-medium">click to visit</span>
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

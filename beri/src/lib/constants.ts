@@ -8,14 +8,14 @@ export const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2'
 export const LLM_MODEL = 'Qwen3-0.6B-q4f32_1-MLC'
 
 // Retrieval settings
-export const TOP_K_CHUNKS = 4
+export const TOP_K_CHUNKS = 5
 export const SIMILARITY_THRESHOLD = 0.3
 
 // Generation settings
 export const MAX_TOKENS = 2048
 export const TEMPERATURE = 0.2
 
-// LLM context settings — needs room for system prompt + 4 chunks + thinking + answer
+// LLM context settings — needs room for system prompt + 5 chunks + thinking + answer
 export const CONTEXT_WINDOW_SIZE = 8192
 
 // IndexedDB settings

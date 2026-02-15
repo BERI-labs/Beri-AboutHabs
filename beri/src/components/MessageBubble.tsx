@@ -136,7 +136,18 @@ export function MessageBubble({ message }: Props) {
   const isUser = message.role === 'user'
   const [showContext, setShowContext] = useState(false)
   const [showThinking, setShowThinking] = useState(false)
+  const [showNudge, setShowNudge] = useState(false)
   const verb = useRotatingVerb(message.isThinking ?? false)
+
+  // Show a nudge after 3s of thinking if user hasn't opened the panel
+  useEffect(() => {
+    if (!message.isThinking || showThinking) {
+      setShowNudge(false)
+      return
+    }
+    const timer = setTimeout(() => setShowNudge(true), 3000)
+    return () => clearTimeout(timer)
+  }, [message.isThinking, showThinking])
   const formattedTime = message.timestamp.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
@@ -177,6 +188,13 @@ export function MessageBubble({ message }: Props) {
               )}
               {message.isThinking ? `${verb}...` : `${verb} — click to view`}
             </button>
+
+            {/* Nudge to click the thinking button */}
+            {showNudge && !showThinking && (
+              <p className="mt-1.5 text-xs text-amber-500 animate-nudge">
+                ^ Tap to see BERI&apos;s reasoning
+              </p>
+            )}
 
             {showThinking && message.thinking && (
               <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 whitespace-pre-wrap max-h-48 overflow-y-auto">

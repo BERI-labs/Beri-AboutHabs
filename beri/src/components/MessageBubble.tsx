@@ -1,5 +1,129 @@
-import { useState } from 'react'
-import type { Message } from '@/types'
+import { useState, useEffect, useRef } from 'react'
+import type { Message, MessageSource } from '@/types'
+
+/**
+ * Map source names to their Habs website URLs.
+ */
+const SOURCE_URL_MAP: Record<string, string> = {
+  'School Overview': 'https://www.habselstree.org.uk/boys/',
+  'Vision and Values': 'https://www.habselstree.org.uk/boys/about-us/our-vision/',
+  'Admissions': 'https://www.habselstree.org.uk/boys/admissions/admissions-process/',
+  'Fees and Financial Support': 'https://www.habselstree.org.uk/boys/admissions/fees/',
+  'Prep School (Ages 4-11)': 'https://www.habselstree.org.uk/boys/prep/life-in-our-prep-school/',
+  'Senior School (Years 7-11, Ages 11-16)': 'https://www.habselstree.org.uk/boys/senior/inside-the-classroom/',
+  'Sixth Form (Years 12-13, Ages 16-18)': 'https://www.habselstree.org.uk/boys/sixth-form/inside-the-classroom/',
+  'Sport and Co-Curricular': 'https://www.habselstree.org.uk/boys/senior/beyond-the-classroom/sport/',
+  'Pastoral Care and House System': 'https://www.habselstree.org.uk/boys/',
+  'Governance and History': 'https://www.habselstree.org.uk/boys/',
+  'Contact Information': 'https://www.habselstree.org.uk/boys/',
+}
+
+function getSourceUrl(source: MessageSource): string {
+  return SOURCE_URL_MAP[source.source] || 'https://www.habselstree.org.uk/boys/'
+}
+
+const THINKING_VERBS = [
+  'Thinking',
+  'Profound-impacting',
+  'Accomplishing',
+  'Actioning',
+  'Actualizing',
+  'Baking',
+  'Brewing',
+  'Calculating',
+  'Cerebrating',
+  'Churning',
+  'Coalescing',
+  'Cogitating',
+  'Computing',
+  'Conjuring',
+  'Considering',
+  'Kwisatz-haderaching',
+  'Caffeinating',
+  'Shai-huluding',
+  'Three-body-probleming',
+  'Murderbot-dairying',
+  'Cogito-ergo-summing',
+  'Eudaimonia-chasing',
+  'Philosophising',
+  'Cultivating',
+  'Cooking',
+  'Crafting',
+  'Creating',
+  'Crunching',
+  'Deliberating',
+  'Determining',
+  'Doing',
+  'Effecting',
+  'Finagling',
+  'Forging',
+  'Forming',
+  'Generating',
+  'Hatching',
+  'Herding',
+  'Honking',
+  'Hustling',
+  'Ideating',
+  'Inferring',
+  'Manifesting',
+  'Marinating',
+  'Moseying',
+  'Mulling',
+  'Mustering',
+  'Musing',
+  'Noodling',
+  'Percolating',
+  'Pondering',
+  'Processing',
+  'Puttering',
+  'Reticulating',
+  'Ruminating',
+  'Schlepping',
+  'Shucking',
+  'Simmering',
+  'Smooshing',
+  'Spinning',
+  'Stewing',
+  'Synthesizing',
+  'Transmuting',
+  'Vibing',
+  'Working',
+]
+
+function useRotatingVerb(isActive: boolean): string {
+  const [verbIndex, setVerbIndex] = useState(0)
+  const usedIndices = useRef<Set<number>>(new Set([0, 1]))
+
+  useEffect(() => {
+    if (!isActive) return
+
+    // Start at "Thinking" (index 0), then "Profound-impacting" (index 1),
+    // then random from remainder
+    const timer = setInterval(() => {
+      setVerbIndex((prev) => {
+        if (prev === 0) return 1
+        // Pick a random unused verb, reset pool if exhausted
+        const remaining = Array.from({ length: THINKING_VERBS.length }, (_, i) => i)
+          .filter((i) => !usedIndices.current.has(i))
+        if (remaining.length === 0) {
+          usedIndices.current = new Set([0, 1])
+          const pool = Array.from({ length: THINKING_VERBS.length }, (_, i) => i)
+            .filter((i) => i !== 0 && i !== 1)
+          const next = pool[Math.floor(Math.random() * pool.length)]
+          usedIndices.current.add(next)
+          return next
+        }
+        const next = remaining[Math.floor(Math.random() * remaining.length)]
+        usedIndices.current.add(next)
+        return next
+      })
+    }, 4000)
+
+    return () => clearInterval(timer)
+  }, [isActive])
+
+  return THINKING_VERBS[verbIndex]
+}
 
 interface Props {
   message: Message
@@ -12,6 +136,7 @@ export function MessageBubble({ message }: Props) {
   const isUser = message.role === 'user'
   const [showContext, setShowContext] = useState(false)
   const [showThinking, setShowThinking] = useState(false)
+  const verb = useRotatingVerb(message.isThinking ?? false)
   const formattedTime = message.timestamp.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
@@ -31,7 +156,7 @@ export function MessageBubble({ message }: Props) {
           }
         `}
       >
-        {/* Thinking trace (collapsible) */}
+        {/* Thinking trace (collapsible — clickable at any time) */}
         {!isUser && (message.thinking || message.isThinking) && (
           <div className="mb-3">
             <button
@@ -50,10 +175,10 @@ export function MessageBubble({ message }: Props) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               )}
-              {message.isThinking ? 'Thinking...' : 'Thinking — click to view'}
+              {message.isThinking ? `${verb}...` : `${verb} — click to view`}
             </button>
 
-            {(showThinking || message.isThinking) && message.thinking && (
+            {showThinking && message.thinking && (
               <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 whitespace-pre-wrap max-h-48 overflow-y-auto">
                 {message.thinking}
                 {message.isThinking && (
@@ -72,7 +197,7 @@ export function MessageBubble({ message }: Props) {
           )}
         </div>
 
-        {/* Sources (for assistant messages) */}
+        {/* Sources (for assistant messages) — clickable links to Habs website */}
         {!isUser && message.sources && message.sources.length > 0 && !message.isStreaming && (
           <div className="mt-3 pt-3 border-t border-gray-200">
             <p className="text-xs font-semibold text-gray-500 mb-2">Sources:</p>
@@ -80,12 +205,17 @@ export function MessageBubble({ message }: Props) {
               {message.sources.map((source, index) => (
                 <li
                   key={index}
-                  className="text-xs text-habs-navy/70 flex items-start gap-1"
+                  className="text-xs flex items-start gap-1"
                 >
                   <span className="text-habs-gold">•</span>
-                  <span>
+                  <a
+                    href={getSourceUrl(source)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-habs-navy/70 hover:text-habs-navy underline decoration-habs-gold/40 hover:decoration-habs-gold transition-colors"
+                  >
                     {source.source} — {source.section}
-                  </span>
+                  </a>
                 </li>
               ))}
             </ul>

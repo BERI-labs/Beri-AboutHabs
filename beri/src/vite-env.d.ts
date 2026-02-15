@@ -18,3 +18,9 @@ declare module '*.json' {
   const value: unknown
   export default value
 }
+
+// Image asset imports
+declare module '*.png' {
+  const src: string
+  export default src
+}

@@ -72,9 +72,8 @@ export async function generate(
     throw new Error('LLM not initialised')
   }
 
-  // Qwen3 with thinking disabled — /no_think prefix keeps it in direct mode
-  const prompt = `/no_think
-Answer using ONLY the info below. If not found, say "I don't have that information."
+  // Qwen3 with thinking enabled — model emits <think>...</think> before answering
+  const prompt = `Answer using ONLY the info below. If not found, say "I don't have that information."
 
 ${context}
 

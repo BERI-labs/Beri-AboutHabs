@@ -41,7 +41,6 @@ const THINKING_VERBS = [
   'Conjuring',
   'Considering',
   'Caffeinating',
-  'Shai-huluding',
   'Three-body-probleming',
   'Cogito-ergo-summing',
   'Eudaimonia-chasing',
@@ -88,6 +87,7 @@ const THINKING_VERBS = [
   'Transmuting',
   'Vibing',
   'Working',
+  'Innovating',
 ]
 
 function useRotatingVerb(isActive: boolean): string {
@@ -172,10 +172,10 @@ export function MessageBubble({ message }: Props) {
           <div className="mb-3">
             <button
               onClick={() => setShowThinking(!showThinking)}
-              className="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-1.5"
+              className="text-xs font-semibold text-purple-500 hover:text-purple-600 transition-colors flex items-center gap-1.5"
             >
               {message.isThinking ? (
-                <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="inline-block w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
               ) : (
                 <svg
                   className={`w-3 h-3 transition-transform ${showThinking ? 'rotate-90' : ''}`}
@@ -191,16 +191,16 @@ export function MessageBubble({ message }: Props) {
 
             {/* Nudge to click the thinking button */}
             {showNudge && !showThinking && (
-              <p className="mt-1.5 text-xs text-amber-500 animate-nudge">
+              <p className="mt-1.5 text-xs text-purple-400 animate-nudge">
                 ^ Tap to see BERI&apos;s reasoning
               </p>
             )}
 
             {showThinking && message.thinking && (
-              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 whitespace-pre-wrap max-h-48 overflow-y-auto">
+              <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs text-purple-900 whitespace-pre-wrap">
                 {message.thinking}
                 {message.isThinking && (
-                  <span className="inline-block w-1.5 h-3 ml-0.5 bg-amber-500 animate-pulse" />
+                  <span className="inline-block w-1.5 h-3 ml-0.5 bg-purple-400 animate-pulse" />
                 )}
               </div>
             )}

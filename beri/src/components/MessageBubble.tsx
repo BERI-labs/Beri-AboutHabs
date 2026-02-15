@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import type { Message, MessageSource } from '@/types'
 
 /**
@@ -38,11 +40,9 @@ const THINKING_VERBS = [
   'Computing',
   'Conjuring',
   'Considering',
-  'Kwisatz-haderaching',
   'Caffeinating',
   'Shai-huluding',
   'Three-body-probleming',
-  'Murderbot-dairying',
   'Cogito-ergo-summing',
   'Eudaimonia-chasing',
   'Philosophising',
@@ -208,12 +208,20 @@ export function MessageBubble({ message }: Props) {
         )}
 
         {/* Message content */}
-        <div className="whitespace-pre-wrap break-words">
-          {message.content}
-          {message.isStreaming && !message.isThinking && (
-            <span className="inline-block w-2 h-4 ml-1 bg-habs-gold animate-pulse" />
-          )}
-        </div>
+        {isUser ? (
+          <div className="whitespace-pre-wrap break-words">
+            {message.content}
+          </div>
+        ) : (
+          <div className="break-words prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-headings:text-habs-navy">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+            {message.isStreaming && !message.isThinking && (
+              <span className="inline-block w-2 h-4 ml-1 bg-habs-gold animate-pulse" />
+            )}
+          </div>
+        )}
 
         {/* Sources (for assistant messages) — clickable links to Habs website */}
         {!isUser && message.sources && message.sources.length > 0 && !message.isStreaming && (

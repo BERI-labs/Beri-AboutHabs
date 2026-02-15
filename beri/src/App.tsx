@@ -3,7 +3,7 @@ import type { Message, LoadingState, MessageSource, ContextChunk } from '@/types
 import { initStorage, loadChunksFromJSON, hasChunks } from '@/lib/storage'
 import { initEmbeddings, embed } from '@/lib/embeddings'
 import { checkWebGPU, initLLM, generate } from '@/lib/llm'
-import { retrieveContext, formatContext, extractSources, tryDirectAnswer, isGarbageResponse, FALLBACK_MESSAGE } from '@/lib/retrieval'
+import { retrieveContext, formatContext, extractSources, isGarbageResponse, FALLBACK_MESSAGE } from '@/lib/retrieval'
 import { getFAQResponse } from '@/lib/faq'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { Header } from '@/components/Header'
@@ -212,7 +212,7 @@ function App() {
         return
       }
 
-      // ── Retrieve chunks (shared by layers 2-4) ─────────────────────
+      // ── Retrieve chunks (shared by layers 2-3) ──────────────────────
       const chunks = await retrieveContext(content)
       const sources: MessageSource[] = extractSources(chunks)
       const contextChunks: ContextChunk[] = chunks.slice(0, 2).map((chunk) => ({
@@ -222,29 +222,9 @@ function App() {
         score: chunk.score,
       }))
 
-      // ── Layer 2: Direct chunk answer (high confidence, ~100ms) ──────
-      const directAnswer = tryDirectAnswer(chunks)
-      if (directAnswer) {
-        console.log('Layer 2: direct chunk answer')
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessage.id
-              ? {
-                  ...msg,
-                  content: directAnswer.answer,
-                  sources: directAnswer.sources,
-                  contextChunks,
-                  isStreaming: false,
-                }
-              : msg
-          )
-        )
-        return
-      }
-
-      // ── Layer 3: LLM generation (slow path) ────────────────────────
+      // ── Layer 2: LLM generation ──────────────────────────────────
       const context = formatContext(chunks)
-      console.log('Layer 3: LLM generation, chunks:', chunks.length, 'context:', context.length, 'chars')
+      console.log('Layer 2: LLM generation, chunks:', chunks.length, 'context:', context.length, 'chars')
 
       let rawStream = ''
       let thinkingContent = ''
@@ -305,9 +285,9 @@ function App() {
         )
       })
 
-      // ── Layer 4: Garbage detection ──────────────────────────────────
+      // ── Layer 3: Garbage detection ──────────────────────────────────
       if (isGarbageResponse(answerContent)) {
-        console.log('Layer 4: garbage detected, using fallback')
+        console.log('Layer 3: garbage detected, using fallback')
         answerContent = FALLBACK_MESSAGE
       }
 

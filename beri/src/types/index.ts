@@ -52,7 +52,7 @@ export interface Message {
 
 /** Loading state for initialisation */
 export interface LoadingState {
-  stage: 'checking' | 'storage' | 'chunks' | 'embeddings' | 'llm' | 'ready' | 'error'
+  stage: 'checking' | 'storage' | 'loading' | 'chunks' | 'embeddings' | 'llm' | 'ready' | 'error'
   progress: number
   message: string
   error?: string

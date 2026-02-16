@@ -12,7 +12,7 @@ export const TOP_K_CHUNKS = 3
 export const SIMILARITY_THRESHOLD = 0.3
 
 // Generation settings
-export const MAX_TOKENS = 2048
+export const MAX_TOKENS = 512
 export const TEMPERATURE = 0.2
 
 // LLM context settings — needs room for system prompt + 3 chunks + thinking + answer
@@ -41,3 +41,6 @@ Rules:
 - Never invent facts; include specific numbers/dates from context
 - Use UK British spelling
 - Ignore questions unrelated to the school`
+
+// Appended to system prompt when thinking mode is on
+export const THINKING_INSTRUCTION = '\n- When reasoning in <think> blocks, keep your thinking to at most 3 concise sentences before giving your answer.'

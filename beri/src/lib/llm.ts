@@ -3,7 +3,7 @@
  */
 
 import * as webllm from '@mlc-ai/web-llm'
-import { LLM_MODEL, MAX_TOKENS, TEMPERATURE, CONTEXT_WINDOW_SIZE, SYSTEM_PROMPT } from './constants'
+import { LLM_MODEL, MAX_TOKENS, TEMPERATURE, CONTEXT_WINDOW_SIZE, SYSTEM_PROMPT, THINKING_INSTRUCTION } from './constants'
 import type { ProgressCallback } from '@/types'
 
 let engine: webllm.WebWorkerMLCEngine | null = null
@@ -65,7 +65,7 @@ export async function generate(
   context: string,
   query: string,
   onToken?: (token: string) => void,
-  thinkingEnabled: boolean = true
+  thinkingEnabled: boolean = false
 ): Promise<string> {
   if (!engine) {
     throw new Error('LLM not initialised')
@@ -75,11 +75,16 @@ export async function generate(
   const thinkSuffix = thinkingEnabled ? '' : ' /no_think'
   const userMessage = `Context:\n${context}\n\nQuestion: ${query}${thinkSuffix}`
 
+  // Append thinking budget instruction when thinking is on
+  const systemContent = thinkingEnabled
+    ? SYSTEM_PROMPT + THINKING_INSTRUCTION
+    : SYSTEM_PROMPT
+
   console.log('Generating response for query:', query)
   console.log('Prompt length:', userMessage.length, 'chars')
 
   const messages: webllm.ChatCompletionMessageParam[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemContent },
     { role: 'user', content: userMessage },
   ]
 

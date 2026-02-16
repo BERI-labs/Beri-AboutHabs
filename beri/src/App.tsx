@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { Message, LoadingState, MessageSource, ContextChunk } from '@/types'
 import { initStorage, loadChunksFromJSON, hasChunks } from '@/lib/storage'
 import { initEmbeddings, embed } from '@/lib/embeddings'
@@ -6,7 +6,6 @@ import { checkWebGPU, initLLM, generate, warmUp } from '@/lib/llm'
 import { retrieveContext, formatContext, extractSources, isGarbageResponse, FALLBACK_MESSAGE } from '@/lib/retrieval'
 import { getFAQResponse } from '@/lib/faq'
 import { detectDevice } from '@/lib/device'
-import type { DeviceInfo } from '@/lib/device'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { Header } from '@/components/Header'
 import { ChatContainer } from '@/components/ChatContainer'
@@ -22,7 +21,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
-  const deviceRef = useRef<DeviceInfo | null>(null)
+  const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const isReady = loadingState.stage === 'ready'
 
   // Initialisation sequence
@@ -33,7 +32,6 @@ function App() {
       try {
         // Step 0: Detect device capabilities
         const device = detectDevice()
-        deviceRef.current = device
         console.log('Device detection:', device)
 
         if (device.tier === 'blocked') {
@@ -79,71 +77,65 @@ function App() {
 
         if (cancelled) return
 
-        // Step 3: Init embeddings FIRST (needed for chunk embedding generation)
+        // Step 3: Load embeddings + LLM in parallel for faster init
+        let embProg = 0
+        let llmProg = 0
+        let chunkProg = 0
+
+        const updateProgress = (msg: string) => {
+          if (cancelled) return
+          // Embeddings: 24% weight, LLM: 40% weight, Chunks: 16% weight
+          const combined = 10 + (embProg / 100) * 24 + (llmProg / 100) * 40 + (chunkProg / 100) * 16
+          setLoadingState({
+            stage: 'loading',
+            progress: Math.min(90, Math.round(combined)),
+            message: msg,
+          })
+        }
+
         setLoadingState({
-          stage: 'embeddings',
-          progress: 15,
-          message: 'Loading embedding model...',
+          stage: 'loading',
+          progress: 10,
+          message: 'Loading models in parallel...',
         })
 
+        // Start LLM download in background
+        const llmPromise = initLLM((progress, message) => {
+          llmProg = progress
+          updateProgress(message)
+        })
+        llmPromise.catch(() => {}) // Prevent unhandled rejection warning
+
+        // Load embeddings concurrently
         await initEmbeddings((progress, message) => {
-          if (!cancelled) {
-            setLoadingState({
-              stage: 'embeddings',
-              progress: 15 + Math.round(progress * 0.25), // 15-40%
-              message,
-            })
-          }
+          embProg = progress
+          updateProgress(message)
         })
 
         if (cancelled) return
 
-        // Step 4: Load chunks with real embeddings
+        // Load chunks while LLM may still be downloading
         const chunksLoaded = await hasChunks()
         if (!chunksLoaded) {
-          setLoadingState({
-            stage: 'chunks',
-            progress: 40,
-            message: 'Generating content embeddings...',
-          })
-
           await loadChunksFromJSON(embed, (current, total) => {
             if (!cancelled) {
-              const chunkProgress = 40 + Math.round((current / total) * 20) // 40-60%
-              setLoadingState({
-                stage: 'chunks',
-                progress: chunkProgress,
-                message: `Embedding content ${current}/${total}...`,
-              })
+              chunkProg = (current / total) * 100
+              updateProgress(`Embedding content ${current}/${total}...`)
             }
           })
         }
 
         if (cancelled) return
 
-        // Step 5: Init LLM
-        setLoadingState({
-          stage: 'llm',
-          progress: 60,
-          message: 'Loading language model...',
-        })
-
-        await initLLM((progress, message) => {
-          if (!cancelled) {
-            setLoadingState({
-              stage: 'llm',
-              progress: 60 + Math.round(progress * 0.35), // 60-95%
-              message,
-            })
-          }
-        })
+        // Wait for LLM to finish (may already be done)
+        await llmPromise
 
         if (cancelled) return
 
-        // Step 6: Warm-up inference — pre-compile WebGPU shaders
+        // Step 4: Warm-up inference — pre-compile WebGPU shaders
         setLoadingState({
-          stage: 'llm',
-          progress: 96,
+          stage: 'loading',
+          progress: 92,
           message: 'Warming up GPU...',
         })
 
@@ -247,70 +239,75 @@ function App() {
       const context = formatContext(chunks)
       console.log('Layer 2: LLM generation, chunks:', chunks.length, 'context:', context.length, 'chars')
 
-      let rawStream = ''
-      let thinkingContent = ''
-      let answerContent = ''
-      let inThinkBlock = false
-      let thinkDone = false
+      // Streaming accumulator (local, not React state — flushed at throttled intervals)
+      const stream = {
+        raw: '',
+        thinking: '',
+        answer: '',
+        inThinkBlock: false,
+        thinkDone: false,
+      }
 
-      const thinkingEnabled = deviceRef.current?.thinkingEnabled ?? true
+      const THROTTLE_MS = 80
+
+      const flushToState = () => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessage.id
+              ? {
+                  ...msg,
+                  content: stream.answer,
+                  thinking: stream.thinking || undefined,
+                  isThinking: stream.inThinkBlock,
+                }
+              : msg
+          )
+        )
+      }
+
+      // Render markdown at ~12 fps instead of per-token
+      const throttleTimer = window.setInterval(flushToState, THROTTLE_MS)
+
       await generate(context, content, (token) => {
-        rawStream += token
+        stream.raw += token
 
-        // Parse <think>...</think> blocks from the stream
-        if (!thinkDone) {
-          // Check if we've entered a think block
-          if (!inThinkBlock && rawStream.includes('<think>')) {
-            inThinkBlock = true
+        // Parse <think>...</think> blocks
+        if (!stream.thinkDone) {
+          if (!stream.inThinkBlock && stream.raw.includes('<think>')) {
+            stream.inThinkBlock = true
           }
 
-          if (inThinkBlock) {
-            // Extract thinking content so far
-            const thinkStart = rawStream.indexOf('<think>') + 7
-            const thinkEnd = rawStream.indexOf('</think>')
+          if (stream.inThinkBlock) {
+            const thinkStart = stream.raw.indexOf('<think>') + 7
+            const thinkEnd = stream.raw.indexOf('</think>')
             if (thinkEnd !== -1) {
-              // Think block complete
-              thinkingContent = rawStream.substring(thinkStart, thinkEnd).trim()
-              answerContent = rawStream.substring(thinkEnd + 8).trim()
-              inThinkBlock = false
-              thinkDone = true
+              stream.thinking = stream.raw.substring(thinkStart, thinkEnd).trim()
+              stream.answer = stream.raw.substring(thinkEnd + 8).trim()
+              stream.inThinkBlock = false
+              stream.thinkDone = true
             } else {
-              // Still thinking
-              thinkingContent = rawStream.substring(thinkStart).trim()
+              stream.thinking = stream.raw.substring(thinkStart).trim()
             }
-
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantMessage.id
-                  ? { ...msg, thinking: thinkingContent, isThinking: !thinkDone, content: answerContent }
-                  : msg
-              )
-            )
             return
           }
         }
 
-        // After thinking (or if no thinking), accumulate answer
-        if (thinkDone) {
-          const thinkEnd = rawStream.indexOf('</think>')
-          answerContent = rawStream.substring(thinkEnd + 8).trim()
+        // After thinking (or no thinking), accumulate answer
+        if (stream.thinkDone) {
+          const thinkEnd = stream.raw.indexOf('</think>')
+          stream.answer = stream.raw.substring(thinkEnd + 8).trim()
         } else {
-          answerContent = rawStream.trim()
+          stream.answer = stream.raw.trim()
         }
-
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessage.id
-              ? { ...msg, content: answerContent, isThinking: false }
-              : msg
-          )
-        )
       }, thinkingEnabled)
 
+      // Stop throttled rendering and do final flush
+      clearInterval(throttleTimer)
+
       // ── Layer 3: Garbage detection ──────────────────────────────────
-      if (isGarbageResponse(answerContent)) {
+      if (isGarbageResponse(stream.answer)) {
         console.log('Layer 3: garbage detected, using fallback')
-        answerContent = FALLBACK_MESSAGE
+        stream.answer = FALLBACK_MESSAGE
       }
 
       setMessages((prev) =>
@@ -318,8 +315,8 @@ function App() {
           msg.id === assistantMessage.id
             ? {
                 ...msg,
-                content: answerContent,
-                thinking: thinkingContent || undefined,
+                content: stream.answer,
+                thinking: stream.thinking || undefined,
                 isThinking: false,
                 sources,
                 contextChunks,
@@ -345,7 +342,7 @@ function App() {
     } finally {
       setIsStreaming(false)
     }
-  }, [isStreaming])
+  }, [isStreaming, thinkingEnabled])
 
   // Show loading screen until ready
   if (!isReady) {
@@ -366,6 +363,8 @@ function App() {
         onSend={handleSend}
         disabled={isStreaming}
         isLoading={isStreaming}
+        thinkingEnabled={thinkingEnabled}
+        onToggleThinking={() => setThinkingEnabled((prev) => !prev)}
       />
     </div>
   )

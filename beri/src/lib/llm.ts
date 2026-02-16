@@ -107,8 +107,10 @@ export async function generate(
     throw genError
   }
 
-  // Reset chat after each response to avoid context buildup
-  await engine.resetChat()
+  // No resetChat() here — we pass a complete messages array each call,
+  // so there's no conversation bleed-through. Keeping the KV cache alive
+  // lets WebLLM reuse prefix entries (system prompt) across queries,
+  // reducing prefill latency on subsequent requests.
 
   return fullResponse
 }

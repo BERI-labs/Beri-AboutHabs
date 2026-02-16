@@ -9,7 +9,7 @@ import { LoadingScreen } from '@/components/LoadingScreen'
 import { Header } from '@/components/Header'
 import { ChatContainer } from '@/components/ChatContainer'
 import { InputArea } from '@/components/InputArea'
-import { HowBeriWorks, hasSeenHowItWorks, markHowItWorksSeen } from '@/components/HowBeriWorks'
+import { HowBeriWorks } from '@/components/HowBeriWorks'
 
 function App() {
   const [loadingState, setLoadingState] = useState<LoadingState>({
@@ -20,15 +20,6 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
-  // Check first visit once on mount — show info on loading screen and mark as seen
-  const [isFirstVisit] = useState(() => {
-    if (!hasSeenHowItWorks()) {
-      markHowItWorksSeen()
-      return true
-    }
-    return false
-  })
-
   const isReady = loadingState.stage === 'ready'
 
   // Initialisation sequence
@@ -338,7 +329,7 @@ function App() {
 
   // Show loading screen until ready
   if (!isReady) {
-    return <LoadingScreen loadingState={loadingState} onRetry={handleRetry} isFirstVisit={isFirstVisit} />
+    return <LoadingScreen loadingState={loadingState} onRetry={handleRetry} />
   }
 
   // Main chat interface

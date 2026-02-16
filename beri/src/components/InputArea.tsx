@@ -4,12 +4,14 @@ interface Props {
   onSend: (message: string) => void
   disabled?: boolean
   isLoading?: boolean
+  thinkingEnabled: boolean
+  onToggleThinking: () => void
 }
 
 /**
  * Chat input area with send button
  */
-export function InputArea({ onSend, disabled = false, isLoading = false }: Props) {
+export function InputArea({ onSend, disabled = false, isLoading = false, thinkingEnabled, onToggleThinking }: Props) {
   const [input, setInput] = useState('')
 
   const handleSubmit = useCallback(() => {
@@ -92,9 +94,40 @@ export function InputArea({ onSend, disabled = false, isLoading = false }: Props
           )}
         </button>
       </div>
-      <p className="text-center text-xs text-gray-400 mt-2">
-        Press Enter to send, Shift+Enter for new line
-      </p>
+      <div className="flex items-center justify-between mt-2 px-1">
+        <button
+          onClick={onToggleThinking}
+          disabled={disabled}
+          type="button"
+          className="flex items-center gap-2 text-xs group"
+        >
+          <span
+            className={`
+              relative inline-flex h-4 w-7 items-center rounded-full transition-colors
+              ${thinkingEnabled ? 'bg-purple-500' : 'bg-gray-300'}
+              ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            <span
+              className={`
+                inline-block h-3 w-3 rounded-full bg-white transition-transform
+                ${thinkingEnabled ? 'translate-x-3.5' : 'translate-x-0.5'}
+              `}
+            />
+          </span>
+          <span className={thinkingEnabled ? 'text-purple-600 font-medium' : 'text-gray-500'}>
+            Thinking mode
+          </span>
+          {thinkingEnabled && (
+            <span className="text-amber-500 font-normal">
+              — slower responses, especially on low-RAM devices
+            </span>
+          )}
+        </button>
+        <span className="text-xs text-gray-400">
+          Enter to send, Shift+Enter for new line
+        </span>
+      </div>
     </div>
   )
 }

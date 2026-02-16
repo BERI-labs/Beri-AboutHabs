@@ -13,10 +13,24 @@ import { InputArea } from '@/components/InputArea'
 import { HowBeriWorks } from '@/components/HowBeriWorks'
 
 function App() {
-  const [loadingState, setLoadingState] = useState<LoadingState>({
-    stage: 'checking',
-    progress: 0,
-    message: 'Checking browser compatibility...',
+  // Run device check synchronously on mount — blocked devices see the error
+  // on the very first render, before useEffect or any downloads
+  const [loadingState, setLoadingState] = useState<LoadingState>(() => {
+    const device = detectDevice()
+    if (device.tier === 'blocked') {
+      return {
+        stage: 'error',
+        progress: 0,
+        message: 'Device not supported',
+        error:
+          "BERI doesn't currently work on phones or low-compute devices (less than 8 GB RAM). Try it on a more powerful laptop or computer!",
+      }
+    }
+    return {
+      stage: 'checking',
+      progress: 0,
+      message: 'Checking browser compatibility...',
+    }
   })
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
@@ -24,27 +38,14 @@ function App() {
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const isReady = loadingState.stage === 'ready'
 
-  // Initialisation sequence
+  // Initialisation sequence — skipped entirely if device was already blocked above
   useEffect(() => {
+    if (loadingState.stage === 'error') return
+
     let cancelled = false
 
     async function initialise() {
       try {
-        // Step 0: Detect device capabilities
-        const device = detectDevice()
-        console.log('Device detection:', device)
-
-        if (device.tier === 'blocked') {
-          setLoadingState({
-            stage: 'error',
-            progress: 0,
-            message: 'Device not supported',
-            error:
-              "BERI doesn't currently work on phones or low-compute devices (less than 8 GB RAM). Try it on a more powerful laptop or computer!",
-          })
-          return
-        }
-
         // Step 1: Check WebGPU
         setLoadingState({
           stage: 'checking',

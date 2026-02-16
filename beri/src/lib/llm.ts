@@ -64,13 +64,16 @@ export async function initLLM(onProgress?: ProgressCallback): Promise<void> {
 export async function generate(
   context: string,
   query: string,
-  onToken?: (token: string) => void
+  onToken?: (token: string) => void,
+  thinkingEnabled: boolean = true
 ): Promise<string> {
   if (!engine) {
     throw new Error('LLM not initialised')
   }
 
-  const userMessage = `Context:\n${context}\n\nQuestion: ${query}`
+  // Qwen3 uses /no_think suffix to disable extended thinking
+  const thinkSuffix = thinkingEnabled ? '' : ' /no_think'
+  const userMessage = `Context:\n${context}\n\nQuestion: ${query}${thinkSuffix}`
 
   console.log('Generating response for query:', query)
   console.log('Prompt length:', userMessage.length, 'chars')
@@ -104,8 +107,10 @@ export async function generate(
     throw genError
   }
 
-  // Reset chat after each response to avoid context buildup
-  await engine.resetChat()
+  // No resetChat() here — we pass a complete messages array each call,
+  // so there's no conversation bleed-through. Keeping the KV cache alive
+  // lets WebLLM reuse prefix entries (system prompt) across queries,
+  // reducing prefill latency on subsequent requests.
 
   return fullResponse
 }

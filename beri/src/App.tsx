@@ -1,10 +1,12 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { Message, LoadingState, MessageSource, ContextChunk } from '@/types'
 import { initStorage, loadChunksFromJSON, hasChunks } from '@/lib/storage'
 import { initEmbeddings, embed } from '@/lib/embeddings'
 import { checkWebGPU, initLLM, generate, warmUp } from '@/lib/llm'
 import { retrieveContext, formatContext, extractSources, isGarbageResponse, FALLBACK_MESSAGE } from '@/lib/retrieval'
 import { getFAQResponse } from '@/lib/faq'
+import { detectDevice } from '@/lib/device'
+import type { DeviceInfo } from '@/lib/device'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { Header } from '@/components/Header'
 import { ChatContainer } from '@/components/ChatContainer'
@@ -20,6 +22,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
+  const deviceRef = useRef<DeviceInfo | null>(null)
   const isReady = loadingState.stage === 'ready'
 
   // Initialisation sequence
@@ -28,6 +31,22 @@ function App() {
 
     async function initialise() {
       try {
+        // Step 0: Detect device capabilities
+        const device = detectDevice()
+        deviceRef.current = device
+        console.log('Device detection:', device)
+
+        if (device.tier === 'blocked') {
+          setLoadingState({
+            stage: 'error',
+            progress: 0,
+            message: 'Device not supported',
+            error:
+              "BERI doesn't currently work on phones or low-compute devices (less than 8 GB RAM). Try it on a more powerful laptop or computer!",
+          })
+          return
+        }
+
         // Step 1: Check WebGPU
         setLoadingState({
           stage: 'checking',
@@ -234,6 +253,7 @@ function App() {
       let inThinkBlock = false
       let thinkDone = false
 
+      const thinkingEnabled = deviceRef.current?.thinkingEnabled ?? true
       await generate(context, content, (token) => {
         rawStream += token
 
@@ -285,7 +305,7 @@ function App() {
               : msg
           )
         )
-      })
+      }, thinkingEnabled)
 
       // ── Layer 3: Garbage detection ──────────────────────────────────
       if (isGarbageResponse(answerContent)) {

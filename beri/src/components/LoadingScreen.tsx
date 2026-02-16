@@ -10,6 +10,7 @@ interface Props {
  */
 export function LoadingScreen({ loadingState, onRetry }: Props) {
   const isError = loadingState.stage === 'error'
+  const isDeviceBlocked = isError && loadingState.message === 'Device not supported'
   const logoUrl = `${import.meta.env.BASE_URL}beri-logo.png`
 
   return (
@@ -47,7 +48,7 @@ export function LoadingScreen({ loadingState, onRetry }: Props) {
                   />
                 </svg>
                 <p className="text-red-300 mb-4">{loadingState.error}</p>
-                {onRetry && (
+                {onRetry && !isDeviceBlocked && (
                   <button
                     onClick={onRetry}
                     className="px-6 py-2 bg-habs-gold text-habs-navy-dark font-semibold rounded-lg hover:bg-habs-gold-light transition-colors"
@@ -94,10 +95,12 @@ export function LoadingScreen({ loadingState, onRetry }: Props) {
               </div>
             )}
 
-            {/* Browser requirement note */}
-            <p className="text-white/50 text-xs">
-              BERI requires a WebGPU-compatible browser (Microsoft Edge or Chrome 113+)
-            </p>
+            {/* Browser requirement note (hide when the issue is device compute, not browser) */}
+            {!isDeviceBlocked && (
+              <p className="text-white/50 text-xs">
+                BERI requires a WebGPU-compatible browser (Microsoft Edge or Chrome 113+)
+              </p>
+            )}
           </div>
 
           {/* Right column: How BERI Works (always shown during loading) */}
